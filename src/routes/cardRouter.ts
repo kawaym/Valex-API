@@ -5,6 +5,7 @@ import {
   createCard,
   activateCard,
   readBalance,
+  createRecharge,
 } from "../controllers/cardController.js";
 import { validateSchema } from "../middlewares/validateSchema.js";
 import * as schemas from "../schemas/schemas.js";
@@ -16,6 +17,12 @@ cardRouter.post(
   validateSchema(schemas.cardCreation),
   validateToken,
   createCard
+);
+cardRouter.post(
+  "/companyAdmin/recharge-card",
+  validateToken,
+  validateSchema(schemas.cardRecharge),
+  createRecharge
 );
 cardRouter.put(
   "/employee/activate-card",

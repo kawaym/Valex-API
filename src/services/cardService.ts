@@ -48,11 +48,8 @@ export async function activateCard(
 ) {
   const hashedPass = bcrypt.hashSync(password, 10);
 
-  const card = await cardRepository.findById(id);
-  if (!card) throw "error_not_found";
-
-  const expired = dayjs(card.expirationDate).diff(dayjs());
-  if (expired >= 0) throw "card_expired";
+  const card = await checkCard(id);
+  await checkCardExpired(card);
 
   if (card.password) throw "card_already_activated";
 
@@ -64,8 +61,8 @@ export async function activateCard(
 }
 
 export async function getBalance(id: number) {
-  const card = await cardRepository.findById(id);
-  if (!card) throw "error_not_found";
+  const card = await checkCard(id);
+  await checkCardExpired(card);
 
   const transactions = await paymentRepository.findByCardId(id);
   const recharges = await rechargeRepository.findByCardId(id);
@@ -76,6 +73,17 @@ export async function getBalance(id: number) {
   const balance = rechargeSum - transactionSum;
 
   return { balance, transactions, recharges };
+}
+
+export async function createRecharge(id: number, amount: number) {
+  const card = await checkCard(id);
+  await checkCardExpired(card);
+
+  try {
+    await rechargeRepository.insert({ cardId: id, amount: amount });
+  } catch {
+    throw "error_server_internal";
+  }
 }
 
 function contractName(name: string) {
@@ -117,4 +125,15 @@ function decryptSecurityCode(securityCode: string) {
   ).toString(CryptoJS.enc.Utf8);
 
   return decryptedSecurityCode;
+}
+
+async function checkCard(id: number) {
+  const card = await cardRepository.findById(id);
+  if (!card) throw "error_not_found";
+  return card;
+}
+
+async function checkCardExpired(card: cardRepository.Card) {
+  const expired = dayjs(card.expirationDate).diff(dayjs());
+  if (expired >= 0) throw "card_expired";
 }

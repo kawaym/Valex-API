@@ -54,3 +54,19 @@ export async function readBalance(req: Request, res: Response) {
     return res.sendStatus(500);
   }
 }
+
+export async function createRecharge(req: Request, res: Response) {
+  try {
+    const { id, amount } = req.body;
+    if (!id || !amount) return res.sendStatus(422);
+
+    await cardService.createRecharge(id, amount);
+    return res.sendStatus(201);
+  } catch (e) {
+    if (e === "error_not_found") {
+      return res.sendStatus(404);
+    } else if (e === "card_expired") {
+      return res.sendStatus(401);
+    }
+  }
+}
