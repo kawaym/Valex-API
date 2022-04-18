@@ -4,6 +4,8 @@ import bcrypt from "bcrypt";
 import CryptoJS from "crypto-js";
 
 import * as cardRepository from "../repositories/cardRepository.js";
+import * as paymentRepository from "../repositories/paymentRepository.js";
+import * as rechargeRepository from "../repositories/rechargeRepository.js";
 
 export async function createCard(
   employeeId: number,
@@ -61,6 +63,21 @@ export async function activateCard(
   await cardRepository.update(id, { password: hashedPass });
 }
 
+export async function getBalance(id: number) {
+  const card = await cardRepository.findById(id);
+  if (!card) throw "error_not_found";
+
+  const transactions = await paymentRepository.findByCardId(id);
+  const recharges = await rechargeRepository.findByCardId(id);
+
+  const transactionSum = transactions.reduce((n, { amount }) => n + amount, 0);
+  const rechargeSum = recharges.reduce((n, { amount }) => n + amount, 0);
+
+  const balance = rechargeSum - transactionSum;
+
+  return { balance, transactions, recharges };
+}
+
 function contractName(name: string) {
   const splitName = name.split(" ");
   const filteredName = splitName.filter((word) => word.length >= 3);
@@ -76,6 +93,7 @@ function contractName(name: string) {
   }
   return contractedName;
 }
+
 function generateSecurityCode() {
   const number = Math.floor(Math.random() * (999 - 1)) + 1;
   const paddedNumber = String(number).padStart(3, "0");

@@ -42,3 +42,15 @@ export async function activateCard(req: Request, res: Response) {
     }
   }
 }
+
+export async function readBalance(req: Request, res: Response) {
+  try {
+    const { id } = req.body;
+    if (!id) return res.sendStatus(422);
+
+    const balance = await cardService.getBalance(id);
+    res.status(200).send(balance);
+  } catch (e) {
+    return res.sendStatus(500);
+  }
+}

@@ -1,7 +1,11 @@
 import { Router } from "express";
 import { validateToken } from "../middlewares/validateToken.js";
 
-import { createCard, activateCard } from "../controllers/cardController.js";
+import {
+  createCard,
+  activateCard,
+  readBalance,
+} from "../controllers/cardController.js";
 import { validateSchema } from "../middlewares/validateSchema.js";
 import * as schemas from "../schemas/schemas.js";
 
@@ -18,5 +22,6 @@ cardRouter.put(
   validateSchema(schemas.cardActivation),
   activateCard
 );
+cardRouter.get("/employee/get-balance", readBalance);
 
 export default cardRouter;
