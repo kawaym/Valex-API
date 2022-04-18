@@ -1,6 +1,7 @@
 import * as creditCardGenerator from "creditcard-generator";
 import dayjs from "dayjs";
 import bcrypt from "bcrypt";
+import CryptoJS from "crypto-js";
 
 import * as cardRepository from "../repositories/cardRepository.js";
 
@@ -38,6 +39,28 @@ export async function checkTypeAndEmployeeId(
   if (card) throw "error_conflict";
 }
 
+export async function activateCard(
+  id: number,
+  securityCode: string,
+  password: string
+) {
+  const hashedPass = bcrypt.hashSync(password, 10);
+
+  const card = await cardRepository.findById(id);
+  if (!card) throw "error_not_found";
+
+  const expired = dayjs(card.expirationDate).diff(dayjs());
+  if (expired >= 0) throw "card_expired";
+
+  if (card.password) throw "card_already_activated";
+
+  const validSecurityCode =
+    securityCode === decryptSecurityCode(card.securityCode);
+  if (!validSecurityCode) throw "invalid_CVC";
+
+  await cardRepository.update(id, { password: hashedPass });
+}
+
 function contractName(name: string) {
   const splitName = name.split(" ");
   const filteredName = splitName.filter((word) => word.length >= 3);
@@ -57,7 +80,23 @@ function generateSecurityCode() {
   const number = Math.floor(Math.random() * (999 - 1)) + 1;
   const paddedNumber = String(number).padStart(3, "0");
 
-  const encryptedNumber = bcrypt.hashSync(paddedNumber, 10);
+  return encryptSecurityCode(paddedNumber);
+}
+
+function encryptSecurityCode(securityCode: string) {
+  const encryptedNumber = CryptoJS.AES.encrypt(
+    securityCode,
+    process.env.JWT_SECRET
+  ).toString();
 
   return encryptedNumber;
+}
+
+function decryptSecurityCode(securityCode: string) {
+  const decryptedSecurityCode = CryptoJS.AES.decrypt(
+    securityCode,
+    process.env.JWT_SECRET
+  ).toString(CryptoJS.enc.Utf8);
+
+  return decryptedSecurityCode;
 }
